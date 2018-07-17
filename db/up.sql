@@ -2,7 +2,7 @@ USE blog;
 
 CREATE TABLE `users`
 (
-  `id`   INT         NOT NULL AUTO_INCREMENT,
+  `id`   CHAR(27)    NOT NULL,
   `name` VARCHAR(64) NOT NULL,
 
   PRIMARY KEY (`id`)
@@ -10,8 +10,8 @@ CREATE TABLE `users`
 
 CREATE TABLE `posts`
 (
-  `id`         INT      NOT NULL AUTO_INCREMENT,
-  `user_id`    INT      NOT NULL,
+  `id`         CHAR(27) NOT NULL,
+  `user_id`    CHAR(27) NOT NULL,
   `body`       TEXT     NOT NULL,
   `created_at` DATETIME NOT NULL,
 

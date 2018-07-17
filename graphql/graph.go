@@ -1,33 +1,35 @@
-//go:generate gqlgen -schema ./schema.graphql
+//go:generate gorunpkg github.com/vektah/gqlgen
+
 package graphql
 
 import (
-	"context"
-	"database/sql"
+  "database/sql"
 )
 
-type graphQLServer struct {
-	db *sql.DB
+type GraphQLServer struct {
+  db *sql.DB
 }
 
-func NewGraphQLServer(db *sql.DB) *graphQLServer {
-	return &graphQLServer{
-		db: db,
-	}
+func NewGraphQLServer(db *sql.DB) *GraphQLServer {
+  return &GraphQLServer{
+    db: db,
+  }
 }
 
-func (*graphQLServer) Mutation_createUser(ctx context.Context, input CreateUserInput) (*User, error) {
-	return nil, nil
+func (s *GraphQLServer) Mutation() MutationResolver {
+  return &mutationResolver{
+    server: s,
+  }
 }
 
-func (*graphQLServer) Mutation_createPost(ctx context.Context, input CreatePostInput) (*Post, error) {
-	return nil, nil
+func (s *GraphQLServer) Query() QueryResolver {
+  return &queryResolver{
+    server: s,
+  }
 }
 
-func (*graphQLServer) Query_users(ctx context.Context, skip *int, take *int) ([]User, error) {
-	return nil, nil
-}
-
-func (*graphQLServer) Query_posts(ctx context.Context, skip *int, take *int) ([]Post, error) {
-	return nil, nil
+func (s *GraphQLServer) User() UserResolver {
+  return &userResolver{
+    server: s,
+  }
 }

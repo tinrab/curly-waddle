@@ -2,25 +2,14 @@
 
 package graphql
 
-import (
-	time "time"
-)
-
 type CreatePostInput struct {
-	UserId int    `json:"userId"`
+	UserId string `json:"userId"`
 	Body   string `json:"body"`
 }
 type CreateUserInput struct {
 	Name string `json:"name"`
 }
-type Post struct {
-	ID        int       `json:"id"`
-	Body      string    `json:"body"`
-	CreatedAt time.Time `json:"createdAt"`
-	User      User      `json:"user"`
-}
-type User struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Posts []Post `json:"posts"`
+type Pagination struct {
+	Skip int `json:"skip"`
+	Take int `json:"take"`
 }

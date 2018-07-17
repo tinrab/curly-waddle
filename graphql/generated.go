@@ -7,23 +7,71 @@ import (
 	context "context"
 	strconv "strconv"
 
-	"github.com/tinrab/curly-waddle/graphql"
 	graphql "github.com/vektah/gqlgen/graphql"
 	introspection "github.com/vektah/gqlgen/neelance/introspection"
 	query "github.com/vektah/gqlgen/neelance/query"
 	schema "github.com/vektah/gqlgen/neelance/schema"
 )
 
+// MakeExecutableSchema creates an ExecutableSchema from the Resolvers interface.
 func MakeExecutableSchema(resolvers Resolvers) graphql.ExecutableSchema {
 	return &executableSchema{resolvers: resolvers}
+}
+
+// NewExecutableSchema creates an ExecutableSchema from the ResolverRoot interface.
+func NewExecutableSchema(resolvers ResolverRoot) graphql.ExecutableSchema {
+	return MakeExecutableSchema(shortMapper{r: resolvers})
 }
 
 type Resolvers interface {
 	Mutation_createUser(ctx context.Context, input CreateUserInput) (*User, error)
 	Mutation_createPost(ctx context.Context, input CreatePostInput) (*Post, error)
 
-	Query_users(ctx context.Context, skip *int, take *int) ([]User, error)
-	Query_posts(ctx context.Context, skip *int, take *int) ([]Post, error)
+	Query_users(ctx context.Context, pagination *Pagination) ([]User, error)
+	Query_posts(ctx context.Context, pagination *Pagination) ([]Post, error)
+
+	User_posts(ctx context.Context, obj *User, pagination *Pagination) ([]Post, error)
+}
+
+type ResolverRoot interface {
+	Mutation() MutationResolver
+	Query() QueryResolver
+	User() UserResolver
+}
+type MutationResolver interface {
+	CreateUser(ctx context.Context, input CreateUserInput) (*User, error)
+	CreatePost(ctx context.Context, input CreatePostInput) (*Post, error)
+}
+type QueryResolver interface {
+	Users(ctx context.Context, pagination *Pagination) ([]User, error)
+	Posts(ctx context.Context, pagination *Pagination) ([]Post, error)
+}
+type UserResolver interface {
+	Posts(ctx context.Context, obj *User, pagination *Pagination) ([]Post, error)
+}
+
+type shortMapper struct {
+	r ResolverRoot
+}
+
+func (s shortMapper) Mutation_createUser(ctx context.Context, input CreateUserInput) (*User, error) {
+	return s.r.Mutation().CreateUser(ctx, input)
+}
+
+func (s shortMapper) Mutation_createPost(ctx context.Context, input CreatePostInput) (*Post, error) {
+	return s.r.Mutation().CreatePost(ctx, input)
+}
+
+func (s shortMapper) Query_users(ctx context.Context, pagination *Pagination) ([]User, error) {
+	return s.r.Query().Users(ctx, pagination)
+}
+
+func (s shortMapper) Query_posts(ctx context.Context, pagination *Pagination) ([]Post, error) {
+	return s.r.Query().Posts(ctx, pagination)
+}
+
+func (s shortMapper) User_posts(ctx context.Context, obj *User, pagination *Pagination) ([]Post, error) {
+	return s.r.User().Posts(ctx, obj, pagination)
 }
 
 type executableSchema struct {
@@ -123,7 +171,6 @@ func (ec *executionContext) _Mutation_createUser(ctx context.Context, field grap
 	rctx.Field = field
 	rctx.PushField(field.Alias)
 	defer rctx.Pop()
-
 	resTmp, err := ec.ResolverMiddleware(ctx, func(ctx context.Context) (interface{}, error) {
 		return ec.resolvers.Mutation_createUser(ctx, args["input"].(CreateUserInput))
 	})
@@ -159,7 +206,6 @@ func (ec *executionContext) _Mutation_createPost(ctx context.Context, field grap
 	rctx.Field = field
 	rctx.PushField(field.Alias)
 	defer rctx.Pop()
-
 	resTmp, err := ec.ResolverMiddleware(ctx, func(ctx context.Context) (interface{}, error) {
 		return ec.resolvers.Mutation_createPost(ctx, args["input"].(CreatePostInput))
 	})
@@ -214,7 +260,7 @@ func (ec *executionContext) _Post_id(ctx context.Context, field graphql.Collecte
 	rctx.PushField(field.Alias)
 	defer rctx.Pop()
 	res := obj.ID
-	return graphql.MarshalInt(res)
+	return graphql.MarshalString(res)
 }
 
 func (ec *executionContext) _Post_body(ctx context.Context, field graphql.CollectedField, obj *Post) graphql.Marshaler {
@@ -285,12 +331,12 @@ func (ec *executionContext) _Query(ctx context.Context, sel []query.Selection) g
 
 func (ec *executionContext) _Query_users(ctx context.Context, field graphql.CollectedField) graphql.Marshaler {
 	args := map[string]interface{}{}
-	var arg0 *int
-	if tmp, ok := field.Args["skip"]; ok {
+	var arg0 *Pagination
+	if tmp, ok := field.Args["pagination"]; ok {
 		var err error
-		var ptr1 int
+		var ptr1 Pagination
 		if tmp != nil {
-			ptr1, err = graphql.UnmarshalInt(tmp)
+			ptr1, err = UnmarshalPagination(tmp)
 			arg0 = &ptr1
 		}
 
@@ -299,22 +345,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 			return graphql.Null
 		}
 	}
-	args["skip"] = arg0
-	var arg1 *int
-	if tmp, ok := field.Args["take"]; ok {
-		var err error
-		var ptr1 int
-		if tmp != nil {
-			ptr1, err = graphql.UnmarshalInt(tmp)
-			arg1 = &ptr1
-		}
-
-		if err != nil {
-			ec.Error(ctx, err)
-			return graphql.Null
-		}
-	}
-	args["take"] = arg1
+	args["pagination"] = arg0
 	ctx = graphql.WithResolverContext(ctx, &graphql.ResolverContext{
 		Object: "Query",
 		Args:   args,
@@ -330,7 +361,7 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 		}()
 
 		resTmp, err := ec.ResolverMiddleware(ctx, func(ctx context.Context) (interface{}, error) {
-			return ec.resolvers.Query_users(ctx, args["skip"].(*int), args["take"].(*int))
+			return ec.resolvers.Query_users(ctx, args["pagination"].(*Pagination))
 		})
 		if err != nil {
 			ec.Error(ctx, err)
@@ -355,12 +386,12 @@ func (ec *executionContext) _Query_users(ctx context.Context, field graphql.Coll
 
 func (ec *executionContext) _Query_posts(ctx context.Context, field graphql.CollectedField) graphql.Marshaler {
 	args := map[string]interface{}{}
-	var arg0 *int
-	if tmp, ok := field.Args["skip"]; ok {
+	var arg0 *Pagination
+	if tmp, ok := field.Args["pagination"]; ok {
 		var err error
-		var ptr1 int
+		var ptr1 Pagination
 		if tmp != nil {
-			ptr1, err = graphql.UnmarshalInt(tmp)
+			ptr1, err = UnmarshalPagination(tmp)
 			arg0 = &ptr1
 		}
 
@@ -369,22 +400,7 @@ func (ec *executionContext) _Query_posts(ctx context.Context, field graphql.Coll
 			return graphql.Null
 		}
 	}
-	args["skip"] = arg0
-	var arg1 *int
-	if tmp, ok := field.Args["take"]; ok {
-		var err error
-		var ptr1 int
-		if tmp != nil {
-			ptr1, err = graphql.UnmarshalInt(tmp)
-			arg1 = &ptr1
-		}
-
-		if err != nil {
-			ec.Error(ctx, err)
-			return graphql.Null
-		}
-	}
-	args["take"] = arg1
+	args["pagination"] = arg0
 	ctx = graphql.WithResolverContext(ctx, &graphql.ResolverContext{
 		Object: "Query",
 		Args:   args,
@@ -400,7 +416,7 @@ func (ec *executionContext) _Query_posts(ctx context.Context, field graphql.Coll
 		}()
 
 		resTmp, err := ec.ResolverMiddleware(ctx, func(ctx context.Context) (interface{}, error) {
-			return ec.resolvers.Query_posts(ctx, args["skip"].(*int), args["take"].(*int))
+			return ec.resolvers.Query_posts(ctx, args["pagination"].(*Pagination))
 		})
 		if err != nil {
 			ec.Error(ctx, err)
@@ -497,7 +513,7 @@ func (ec *executionContext) _User_id(ctx context.Context, field graphql.Collecte
 	rctx.PushField(field.Alias)
 	defer rctx.Pop()
 	res := obj.ID
-	return graphql.MarshalInt(res)
+	return graphql.MarshalString(res)
 }
 
 func (ec *executionContext) _User_name(ctx context.Context, field graphql.CollectedField, obj *User) graphql.Marshaler {
@@ -512,23 +528,58 @@ func (ec *executionContext) _User_name(ctx context.Context, field graphql.Collec
 }
 
 func (ec *executionContext) _User_posts(ctx context.Context, field graphql.CollectedField, obj *User) graphql.Marshaler {
-	rctx := graphql.GetResolverContext(ctx)
-	rctx.Object = "User"
-	rctx.Args = nil
-	rctx.Field = field
-	rctx.PushField(field.Alias)
-	defer rctx.Pop()
-	res := obj.Posts
-	arr1 := graphql.Array{}
-	for idx1 := range res {
-		arr1 = append(arr1, func() graphql.Marshaler {
-			rctx := graphql.GetResolverContext(ctx)
-			rctx.PushIndex(idx1)
-			defer rctx.Pop()
-			return ec._Post(ctx, field.Selections, &res[idx1])
-		}())
+	args := map[string]interface{}{}
+	var arg0 *Pagination
+	if tmp, ok := field.Args["pagination"]; ok {
+		var err error
+		var ptr1 Pagination
+		if tmp != nil {
+			ptr1, err = UnmarshalPagination(tmp)
+			arg0 = &ptr1
+		}
+
+		if err != nil {
+			ec.Error(ctx, err)
+			return graphql.Null
+		}
 	}
-	return arr1
+	args["pagination"] = arg0
+	ctx = graphql.WithResolverContext(ctx, &graphql.ResolverContext{
+		Object: "User",
+		Args:   args,
+		Field:  field,
+	})
+	return graphql.Defer(func() (ret graphql.Marshaler) {
+		defer func() {
+			if r := recover(); r != nil {
+				userErr := ec.Recover(ctx, r)
+				ec.Error(ctx, userErr)
+				ret = graphql.Null
+			}
+		}()
+
+		resTmp, err := ec.ResolverMiddleware(ctx, func(ctx context.Context) (interface{}, error) {
+			return ec.resolvers.User_posts(ctx, obj, args["pagination"].(*Pagination))
+		})
+		if err != nil {
+			ec.Error(ctx, err)
+			return graphql.Null
+		}
+		if resTmp == nil {
+			return graphql.Null
+		}
+		res := resTmp.([]Post)
+		arr1 := graphql.Array{}
+		for idx1 := range res {
+			arr1 = append(arr1, func() graphql.Marshaler {
+				rctx := graphql.GetResolverContext(ctx)
+				rctx.PushIndex(idx1)
+				defer rctx.Pop()
+				return ec._Post(ctx, field.Selections, &res[idx1])
+			}())
+		}
+		return arr1
+	})
 }
 
 var __DirectiveImplementors = []string{"__Directive"}
@@ -619,10 +670,7 @@ func (ec *executionContext) ___Directive_args(ctx context.Context, field graphql
 			rctx := graphql.GetResolverContext(ctx)
 			rctx.PushIndex(idx1)
 			defer rctx.Pop()
-			if res[idx1] == nil {
-				return graphql.Null
-			}
-			return ec.___InputValue(ctx, field.Selections, res[idx1])
+			return ec.___InputValue(ctx, field.Selections, &res[idx1])
 		}())
 	}
 	return arr1
@@ -779,10 +827,7 @@ func (ec *executionContext) ___Field_args(ctx context.Context, field graphql.Col
 			rctx := graphql.GetResolverContext(ctx)
 			rctx.PushIndex(idx1)
 			defer rctx.Pop()
-			if res[idx1] == nil {
-				return graphql.Null
-			}
-			return ec.___InputValue(ctx, field.Selections, res[idx1])
+			return ec.___InputValue(ctx, field.Selections, &res[idx1])
 		}())
 	}
 	return arr1
@@ -796,10 +841,7 @@ func (ec *executionContext) ___Field_type(ctx context.Context, field graphql.Col
 	rctx.PushField(field.Alias)
 	defer rctx.Pop()
 	res := obj.Type()
-	if res == nil {
-		return graphql.Null
-	}
-	return ec.___Type(ctx, field.Selections, res)
+	return ec.___Type(ctx, field.Selections, &res)
 }
 
 func (ec *executionContext) ___Field_isDeprecated(ctx context.Context, field graphql.CollectedField, obj *introspection.Field) graphql.Marshaler {
@@ -889,10 +931,7 @@ func (ec *executionContext) ___InputValue_type(ctx context.Context, field graphq
 	rctx.PushField(field.Alias)
 	defer rctx.Pop()
 	res := obj.Type()
-	if res == nil {
-		return graphql.Null
-	}
-	return ec.___Type(ctx, field.Selections, res)
+	return ec.___Type(ctx, field.Selections, &res)
 }
 
 func (ec *executionContext) ___InputValue_defaultValue(ctx context.Context, field graphql.CollectedField, obj *introspection.InputValue) graphql.Marshaler {
@@ -954,10 +993,7 @@ func (ec *executionContext) ___Schema_types(ctx context.Context, field graphql.C
 			rctx := graphql.GetResolverContext(ctx)
 			rctx.PushIndex(idx1)
 			defer rctx.Pop()
-			if res[idx1] == nil {
-				return graphql.Null
-			}
-			return ec.___Type(ctx, field.Selections, res[idx1])
+			return ec.___Type(ctx, field.Selections, &res[idx1])
 		}())
 	}
 	return arr1
@@ -971,10 +1007,7 @@ func (ec *executionContext) ___Schema_queryType(ctx context.Context, field graph
 	rctx.PushField(field.Alias)
 	defer rctx.Pop()
 	res := obj.QueryType()
-	if res == nil {
-		return graphql.Null
-	}
-	return ec.___Type(ctx, field.Selections, res)
+	return ec.___Type(ctx, field.Selections, &res)
 }
 
 func (ec *executionContext) ___Schema_mutationType(ctx context.Context, field graphql.CollectedField, obj *introspection.Schema) graphql.Marshaler {
@@ -1019,10 +1052,7 @@ func (ec *executionContext) ___Schema_directives(ctx context.Context, field grap
 			rctx := graphql.GetResolverContext(ctx)
 			rctx.PushIndex(idx1)
 			defer rctx.Pop()
-			if res[idx1] == nil {
-				return graphql.Null
-			}
-			return ec.___Directive(ctx, field.Selections, res[idx1])
+			return ec.___Directive(ctx, field.Selections, &res[idx1])
 		}())
 	}
 	return arr1
@@ -1131,10 +1161,7 @@ func (ec *executionContext) ___Type_fields(ctx context.Context, field graphql.Co
 			rctx := graphql.GetResolverContext(ctx)
 			rctx.PushIndex(idx1)
 			defer rctx.Pop()
-			if res[idx1] == nil {
-				return graphql.Null
-			}
-			return ec.___Field(ctx, field.Selections, res[idx1])
+			return ec.___Field(ctx, field.Selections, &res[idx1])
 		}())
 	}
 	return arr1
@@ -1154,10 +1181,7 @@ func (ec *executionContext) ___Type_interfaces(ctx context.Context, field graphq
 			rctx := graphql.GetResolverContext(ctx)
 			rctx.PushIndex(idx1)
 			defer rctx.Pop()
-			if res[idx1] == nil {
-				return graphql.Null
-			}
-			return ec.___Type(ctx, field.Selections, res[idx1])
+			return ec.___Type(ctx, field.Selections, &res[idx1])
 		}())
 	}
 	return arr1
@@ -1177,10 +1201,7 @@ func (ec *executionContext) ___Type_possibleTypes(ctx context.Context, field gra
 			rctx := graphql.GetResolverContext(ctx)
 			rctx.PushIndex(idx1)
 			defer rctx.Pop()
-			if res[idx1] == nil {
-				return graphql.Null
-			}
-			return ec.___Type(ctx, field.Selections, res[idx1])
+			return ec.___Type(ctx, field.Selections, &res[idx1])
 		}())
 	}
 	return arr1
@@ -1211,10 +1232,7 @@ func (ec *executionContext) ___Type_enumValues(ctx context.Context, field graphq
 			rctx := graphql.GetResolverContext(ctx)
 			rctx.PushIndex(idx1)
 			defer rctx.Pop()
-			if res[idx1] == nil {
-				return graphql.Null
-			}
-			return ec.___EnumValue(ctx, field.Selections, res[idx1])
+			return ec.___EnumValue(ctx, field.Selections, &res[idx1])
 		}())
 	}
 	return arr1
@@ -1234,10 +1252,7 @@ func (ec *executionContext) ___Type_inputFields(ctx context.Context, field graph
 			rctx := graphql.GetResolverContext(ctx)
 			rctx.PushIndex(idx1)
 			defer rctx.Pop()
-			if res[idx1] == nil {
-				return graphql.Null
-			}
-			return ec.___InputValue(ctx, field.Selections, res[idx1])
+			return ec.___InputValue(ctx, field.Selections, &res[idx1])
 		}())
 	}
 	return arr1
@@ -1265,7 +1280,7 @@ func UnmarshalCreatePostInput(v interface{}) (CreatePostInput, error) {
 		switch k {
 		case "userId":
 			var err error
-			it.UserId, err = graphql.UnmarshalInt(v)
+			it.UserId, err = graphql.UnmarshalString(v)
 			if err != nil {
 				return it, err
 			}
@@ -1299,6 +1314,30 @@ func UnmarshalCreateUserInput(v interface{}) (CreateUserInput, error) {
 	return it, nil
 }
 
+func UnmarshalPagination(v interface{}) (Pagination, error) {
+	var it Pagination
+	var asMap = v.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "skip":
+			var err error
+			it.Skip, err = graphql.UnmarshalInt(v)
+			if err != nil {
+				return it, err
+			}
+		case "take":
+			var err error
+			it.Take, err = graphql.UnmarshalInt(v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) introspectSchema() *introspection.Schema {
 	return introspection.WrapSchema(parsedSchema)
 }
@@ -1313,14 +1352,19 @@ func (ec *executionContext) introspectType(name string) *introspection.Type {
 
 var parsedSchema = schema.MustParse(`scalar Time
 
+input Pagination {
+  skip: Int!
+  take: Int!
+}
+
 type User {
-    id: Int!
+    id: String!
     name: String!
-    posts: [Post!]!
+    posts(pagination: Pagination): [Post!]!
 }
 
 type Post {
-    id: Int!
+    id: String!
     body: String!
     createdAt: Time!
     user: User!
@@ -1331,7 +1375,7 @@ input CreateUserInput {
 }
 
 input CreatePostInput {
-    userId: Int!
+    userId: String!
     body: String!
 }
 
@@ -1341,7 +1385,7 @@ type Mutation {
 }
 
 type Query {
-    users(skip: Int, take: Int): [User!]!
-    posts(skip: Int, take: Int): [Post!]!
+    users(pagination: Pagination): [User!]!
+    posts(pagination: Pagination): [Post!]!
 }
 `)

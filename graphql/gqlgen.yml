@@ -1,0 +1,10 @@
+schema: schema.graphql
+
+models:
+  Post:
+    model: github.com/tinrab/curly-waddle/graphql.Post
+  User:
+    model: github.com/tinrab/curly-waddle/graphql.User
+    fields:
+      posts:
+        resolver: true

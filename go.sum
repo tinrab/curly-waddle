@@ -1,0 +1,14 @@
+github.com/corpix/uarand v0.0.0-20170903190822-2b8494104d86 h1:kRNlij/Yv/baHnXYdNqr+8ch5tLYAWS/VRaJ2ZvFgu0=
+github.com/corpix/uarand v0.0.0-20170903190822-2b8494104d86/go.mod h1:JSm890tOkDN+M1jqN8pUGDKnzJrsVbJwSMHBY4zwz7M=
+github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/go-sql-driver/mysql v1.4.0/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
+github.com/gorilla/websocket v1.2.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
+github.com/icrowley/fake v0.0.0-20180203215853-4178557ae428/go.mod h1:uhpZMVGznybq1itEKXj6RYw9I71qK4kH+OGMjRC4KEo=
+github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/segmentio/ksuid v0.0.0-20180711015022-46a0ee1899b0 h1:gVMTGwXdenq1F5CNf1RPjnyGForctEiHMAIkK4dH3cI=
+github.com/segmentio/ksuid v0.0.0-20180711015022-46a0ee1899b0/go.mod h1:BXuJDr2byAiHuQaQtSKoXh1J0YmUDurywOXgB2w+OSU=
+github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
+github.com/vektah/gorunpkg v0.0.0-20180221021944-c4ab2c9cf7b9/go.mod h1:MZ9IjObqALnFhMpmWFj2XIY6l9B02Ah54Q4ZUkq/nx0=
+github.com/vektah/gqlgen v0.0.0-20180714070128-381b34691fd9 h1:qkhZ9UvXCc1K+AgVRsSABoBin7UbyBqqJ8G+Tk6G//Q=
+github.com/vektah/gqlgen v0.0.0-20180714070128-381b34691fd9/go.mod h1:p6RS1iWLR+HVU1U2lU6vWgLjXSBtD0hRubzDWKhXFhY=
+google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
