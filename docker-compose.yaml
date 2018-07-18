@@ -4,4 +4,4 @@ services:
   db:
     build: "./db"
     ports:
-    - "3306:3306"
+    - "5432:5432"

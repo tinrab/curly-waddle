@@ -6,6 +6,7 @@ require (
 	github.com/go-sql-driver/mysql v1.4.0
 	github.com/gorilla/websocket v1.2.0 // indirect
 	github.com/icrowley/fake v0.0.0-20180203215853-4178557ae428
+	github.com/lib/pq v0.0.0-20180523175426-90697d60dd84
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/segmentio/ksuid v0.0.0-20180711015022-46a0ee1899b0
 	github.com/stretchr/testify v1.2.2 // indirect

@@ -1,9 +1,9 @@
-FROM mysql:8.0.11
+FROM postgres:10.3
 
-ENV MYSQL_ROOT_PASSWORD 123456
-ENV MYSQL_DATABASE blog
+ENV POSTGRES_DB blog
+ENV POSTGRES_USER blog
+ENV POSTGRES_PASSWORD 123456
 
 COPY ./up.sql /docker-entrypoint-initdb.d/
 
-EXPOSE 3306
-CMD ["mysqld"]
+CMD ["postgres"]

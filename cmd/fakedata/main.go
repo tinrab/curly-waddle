@@ -1,80 +1,85 @@
 package main
 
 import (
-  "database/sql"
-  "log"
-  "math/rand"
-  "strings"
-  "time"
+	"database/sql"
+	"log"
+	"math/rand"
+	"time"
 
-  _ "github.com/go-sql-driver/mysql"
-  "github.com/icrowley/fake"
-  "github.com/segmentio/ksuid"
+	"github.com/icrowley/fake"
+	"github.com/lib/pq"
+	"github.com/segmentio/ksuid"
 )
 
 func main() {
-  db, err := sql.Open("mysql", "root:123456@tcp(127.0.0.1:3306)/blog")
-  if err != nil {
-    log.Fatal(err)
-  }
-  err = db.Ping()
-  if err != nil {
-    log.Fatal(err)
-  }
+	db, err := sql.Open("postgres", "postgres://blog:123456@127.0.0.1:5432/blog?sslmode=disable")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = db.Ping()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  // Drop
-  _, err = db.Exec("DELETE FROM users")
-  _, err = db.Exec("DELETE FROM posts")
-  if err != nil {
-    log.Fatal(err)
-  }
+	// Drop
+	_, err = db.Exec("DELETE FROM users")
+	_, err = db.Exec("DELETE FROM posts")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  // Insert users
-  var args []interface{}
-  q := strings.Builder{}
-  var userIDs []string
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  q.WriteString("INSERT INTO users(id, name) VALUES")
+	// Insert users
+	insertUser, err := tx.Prepare(pq.CopyIn("users", "id", "name"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	var userIDs []string
+	const numUsers = 10000
+	for i := 1; i <= numUsers; i++ {
+		id := ksuid.New().String()
+		userIDs = append(userIDs, id)
+		_, err := insertUser.Exec(id, fake.FullName())
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	_, err = insertUser.Exec()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  const numUsers = 10000
-  for i := 1; i <= numUsers; i++ {
-    q.WriteString("(?, ?)")
-    if i <= numUsers-1 {
-      q.WriteRune(',')
-    }
+	// Insert posts
+	insertPost, err := tx.Prepare(pq.CopyIn("posts", "id", "user_id", "created_at", "body"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	for i := 1; i <= 100; i++ {
+		numPosts := int(rand.Int31n(10000) + 2)
+		for j := 1; j <= numPosts; j++ {
+			offset := time.Duration(rand.Int31n(1000000)) * time.Minute
+			_, err := insertPost.Exec(
+				ksuid.New().String(),
+				userIDs[rand.Int31n(int32(len(userIDs)))],
+				time.Now().Add(offset).UTC(),
+				fake.Sentence(),
+			)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+	_, err = insertPost.Exec()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-    id := ksuid.New().String()
-    userIDs = append(userIDs, id)
-    args = append(args, id)
-    args = append(args, fake.FullName())
-  }
-  _, err = db.Exec(q.String(), args...)
-  if err != nil {
-    log.Fatal(err)
-  }
-
-  // Insert posts
-  q = strings.Builder{}
-  for i := 1; i <= 100; i++ {
-    args = []interface{}{}
-    q.Reset()
-    q.WriteString("INSERT INTO posts(id, user_id, body, created_at) VALUES")
-    numPosts := int(rand.Int31n(10000) + 2)
-    for j := 1; j <= numPosts; j++ {
-      q.WriteString("(?, ?, ?, ?)")
-      if j <= numPosts-1 {
-        q.WriteRune(',')
-      }
-      args = append(args, ksuid.New().String())
-      args = append(args, userIDs[rand.Int31n(int32(len(userIDs)))])
-      args = append(args, fake.Sentence())
-      offset := time.Duration(rand.Int31n(1000000)) * time.Minute
-      args = append(args, time.Now().Add(offset).UTC())
-    }
-
-    _, err = db.Exec(q.String(), args...)
-    if err != nil {
-      log.Fatal(err)
-    }
-  }
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
