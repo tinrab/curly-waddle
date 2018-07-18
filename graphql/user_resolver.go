@@ -9,5 +9,6 @@ type userResolver struct {
 }
 
 func (r *userResolver) Posts(ctx context.Context, obj *User, pagination *Pagination) ([]Post, error) {
-  return nil, nil
+  postLoader := ctx.Value(postLoaderKey{}).(*PostLoader)
+  return postLoader.Query(ctx, obj.ID, pagination)()
 }

@@ -9,6 +9,7 @@ import (
 
   _ "github.com/go-sql-driver/mysql"
   "github.com/icrowley/fake"
+  "github.com/segmentio/ksuid"
 )
 
 func main() {
@@ -31,6 +32,7 @@ func main() {
   // Insert users
   var args []interface{}
   q := strings.Builder{}
+  var userIDs []string
 
   q.WriteString("INSERT INTO users(id, name) VALUES")
 
@@ -41,7 +43,9 @@ func main() {
       q.WriteRune(',')
     }
 
-    args = append(args, i)
+    id := ksuid.New().String()
+    userIDs = append(userIDs, id)
+    args = append(args, id)
     args = append(args, fake.FullName())
   }
   _, err = db.Exec(q.String(), args...)
@@ -51,7 +55,6 @@ func main() {
 
   // Insert posts
   q = strings.Builder{}
-  postID := 1
   for i := 1; i <= 100; i++ {
     args = []interface{}{}
     q.Reset()
@@ -62,12 +65,11 @@ func main() {
       if j <= numPosts-1 {
         q.WriteRune(',')
       }
-      args = append(args, postID)
-      args = append(args, rand.Int31n(numUsers)+1)
+      args = append(args, ksuid.New().String())
+      args = append(args, userIDs[rand.Int31n(int32(len(userIDs)))])
       args = append(args, fake.Sentence())
       offset := time.Duration(rand.Int31n(1000000)) * time.Minute
       args = append(args, time.Now().Add(offset).UTC())
-      postID++
     }
 
     _, err = db.Exec(q.String(), args...)
