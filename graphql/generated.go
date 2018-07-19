@@ -27,6 +27,7 @@ type Resolvers interface {
 	Mutation_createUser(ctx context.Context, input CreateUserInput) (*User, error)
 	Mutation_createPost(ctx context.Context, input CreatePostInput) (*Post, error)
 
+	Post_user(ctx context.Context, obj *Post) (*User, error)
 	Query_users(ctx context.Context, pagination *Pagination) ([]User, error)
 	Query_posts(ctx context.Context, pagination *Pagination) ([]Post, error)
 
@@ -35,12 +36,16 @@ type Resolvers interface {
 
 type ResolverRoot interface {
 	Mutation() MutationResolver
+	Post() PostResolver
 	Query() QueryResolver
 	User() UserResolver
 }
 type MutationResolver interface {
 	CreateUser(ctx context.Context, input CreateUserInput) (*User, error)
 	CreatePost(ctx context.Context, input CreatePostInput) (*Post, error)
+}
+type PostResolver interface {
+	User(ctx context.Context, obj *Post) (*User, error)
 }
 type QueryResolver interface {
 	Users(ctx context.Context, pagination *Pagination) ([]User, error)
@@ -60,6 +65,10 @@ func (s shortMapper) Mutation_createUser(ctx context.Context, input CreateUserIn
 
 func (s shortMapper) Mutation_createPost(ctx context.Context, input CreatePostInput) (*Post, error) {
 	return s.r.Mutation().CreatePost(ctx, input)
+}
+
+func (s shortMapper) Post_user(ctx context.Context, obj *Post) (*User, error) {
+	return s.r.Post().User(ctx, obj)
 }
 
 func (s shortMapper) Query_users(ctx context.Context, pagination *Pagination) ([]User, error) {
@@ -286,14 +295,36 @@ func (ec *executionContext) _Post_createdAt(ctx context.Context, field graphql.C
 }
 
 func (ec *executionContext) _Post_user(ctx context.Context, field graphql.CollectedField, obj *Post) graphql.Marshaler {
-	rctx := graphql.GetResolverContext(ctx)
-	rctx.Object = "Post"
-	rctx.Args = nil
-	rctx.Field = field
-	rctx.PushField(field.Alias)
-	defer rctx.Pop()
-	res := obj.User
-	return ec._User(ctx, field.Selections, &res)
+	ctx = graphql.WithResolverContext(ctx, &graphql.ResolverContext{
+		Object: "Post",
+		Args:   nil,
+		Field:  field,
+	})
+	return graphql.Defer(func() (ret graphql.Marshaler) {
+		defer func() {
+			if r := recover(); r != nil {
+				userErr := ec.Recover(ctx, r)
+				ec.Error(ctx, userErr)
+				ret = graphql.Null
+			}
+		}()
+
+		resTmp, err := ec.ResolverMiddleware(ctx, func(ctx context.Context) (interface{}, error) {
+			return ec.resolvers.Post_user(ctx, obj)
+		})
+		if err != nil {
+			ec.Error(ctx, err)
+			return graphql.Null
+		}
+		if resTmp == nil {
+			return graphql.Null
+		}
+		res := resTmp.(*User)
+		if res == nil {
+			return graphql.Null
+		}
+		return ec._User(ctx, field.Selections, res)
+	})
 }
 
 var queryImplementors = []string{"Query"}
@@ -1367,7 +1398,7 @@ type Post {
     id: String!
     body: String!
     createdAt: Time!
-    user: User!
+    user: User
 }
 
 input CreateUserInput {

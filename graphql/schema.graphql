@@ -15,7 +15,7 @@ type Post {
     id: String!
     body: String!
     createdAt: Time!
-    user: User!
+    user: User
 }
 
 input CreateUserInput {

@@ -3,33 +3,39 @@
 package graphql
 
 import (
-  "database/sql"
+	"database/sql"
 )
 
 type GraphQLServer struct {
-  db *sql.DB
+	db *sql.DB
 }
 
 func NewGraphQLServer(db *sql.DB) *GraphQLServer {
-  return &GraphQLServer{
-    db: db,
-  }
+	return &GraphQLServer{
+		db: db,
+	}
 }
 
 func (s *GraphQLServer) Mutation() MutationResolver {
-  return &mutationResolver{
-    server: s,
-  }
+	return &mutationResolver{
+		server: s,
+	}
 }
 
 func (s *GraphQLServer) Query() QueryResolver {
-  return &queryResolver{
-    server: s,
-  }
+	return &queryResolver{
+		server: s,
+	}
 }
 
 func (s *GraphQLServer) User() UserResolver {
-  return &userResolver{
-    server: s,
-  }
+	return &userResolver{
+		server: s,
+	}
+}
+
+func (s *GraphQLServer) Post() PostResolver {
+	return &postResolver{
+		server: s,
+	}
 }

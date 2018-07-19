@@ -3,19 +3,17 @@ package graphql
 import (
 	"context"
 	"database/sql"
-	"net/http"
 	"sync"
-	"time"
 
 	"github.com/lib/pq"
 )
 
 type PostLoader struct {
 	pagination Pagination
-	userIDs    []string
 	data       map[string][]Post
 	db         *sql.DB
 	mutex      sync.Mutex
+	loaded     bool
 }
 
 func NewPostLoader(db *sql.DB) *PostLoader {
@@ -30,49 +28,53 @@ func NewPostLoader(db *sql.DB) *PostLoader {
 	}
 }
 
-func (p *PostLoader) Query(ctx context.Context, userID string, pagination *Pagination) func() ([]Post, error) {
-	p.mutex.Lock()
-	if posts, ok := p.data[userID]; ok {
-		return func() ([]Post, error) {
-			return posts, nil
-		}
-	}
-	if pagination != nil {
-		p.pagination = *pagination
-	}
-	p.userIDs = append(p.userIDs, userID)
-	p.mutex.Unlock()
-
-	finish := make(chan struct{})
-	go func() {
-		<-time.After(5 * time.Millisecond)
-		finish <- struct{}{}
-	}()
-
-	return func() ([]Post, error) {
-		<-finish
-		if posts, ok := p.data[userID]; ok {
-			return posts, nil
-		}
-		err := p.load()
-		if err != nil {
-			return nil, err
-		}
-		return p.data[userID], nil
-	}
-}
-
-func (p *PostLoader) load() error {
-	if len(p.userIDs) == 0 {
-		return nil
-	}
-
+func (p *PostLoader) Enqueue(userIDs []string) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
+	for _, userID := range userIDs {
+		p.data[userID] = []Post{}
+	}
+}
+
+func (p *PostLoader) Query(ctx context.Context, userID string, pagination *Pagination) ([]Post, error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if p.loaded {
+		return p.data[userID], nil
+	}
+
+	if len(p.data) == 0 {
+		return nil, nil
+	}
+
+	if pagination != nil {
+		p.pagination = *pagination
+	}
+
+	var userIDs []string
+	for userID := range p.data {
+		userIDs = append(userIDs, userID)
+	}
+	err := p.load(userIDs)
+	if err != nil {
+		return nil, err
+	}
+	p.loaded = true
+
+	userLoader := ctx.Value(userLoaderKey{}).(*UserLoader)
+	if userLoader != nil {
+		userLoader.Enqueue(userIDs)
+	}
+
+	return p.data[userID], nil
+}
+
+func (p *PostLoader) load(userIDs []string) error {
 	rows, err := p.db.Query(
 		"SELECT id, user_id, created_at, body FROM read_user_posts ($1, $2, $3)",
-		pq.Array(p.userIDs),
+		pq.Array(userIDs),
 		p.pagination.Skip,
 		p.pagination.Take,
 	)
@@ -88,33 +90,15 @@ func (p *PostLoader) load() error {
 			return err
 		}
 
-		if _, ok := p.data[userID]; !ok {
-			p.data[userID] = []Post{}
-		}
 		p.data[userID] = append(p.data[userID], Post{
 			ID:        post.ID,
 			CreatedAt: post.CreatedAt,
 			Body:      post.Body,
-			User: User{
+			User: &User{
 				ID: userID,
 			},
 		})
 	}
 
-	p.userIDs = []string{}
-
 	return nil
-}
-
-type postLoaderKey struct{}
-
-func PostLoaderMiddleware(db *sql.DB, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		postLoader := NewPostLoader(db)
-
-		ctx := context.WithValue(r.Context(), postLoaderKey{}, postLoader)
-		r = r.WithContext(ctx)
-
-		next.ServeHTTP(w, r)
-	})
 }

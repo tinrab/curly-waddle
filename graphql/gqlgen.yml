@@ -3,6 +3,9 @@ schema: schema.graphql
 models:
   Post:
     model: github.com/tinrab/curly-waddle/graphql.Post
+    fields:
+      user:
+        resolver: true
   User:
     model: github.com/tinrab/curly-waddle/graphql.User
     fields:
