@@ -8,8 +8,12 @@ github.com/lib/pq v0.0.0-20180523175426-90697d60dd84/go.mod h1:5WUZQaWbwv1U+lTRe
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/segmentio/ksuid v0.0.0-20180711015022-46a0ee1899b0 h1:gVMTGwXdenq1F5CNf1RPjnyGForctEiHMAIkK4dH3cI=
 github.com/segmentio/ksuid v0.0.0-20180711015022-46a0ee1899b0/go.mod h1:BXuJDr2byAiHuQaQtSKoXh1J0YmUDurywOXgB2w+OSU=
+github.com/segmentio/ksuid v0.0.0-20180720020726-a8437582dced h1:rEk5h89pQ3pzw22CSYyo4v6wmSmPQ5Isxco9cE+CYBg=
+github.com/segmentio/ksuid v0.0.0-20180720020726-a8437582dced/go.mod h1:BXuJDr2byAiHuQaQtSKoXh1J0YmUDurywOXgB2w+OSU=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/vektah/gorunpkg v0.0.0-20180221021944-c4ab2c9cf7b9/go.mod h1:MZ9IjObqALnFhMpmWFj2XIY6l9B02Ah54Q4ZUkq/nx0=
 github.com/vektah/gqlgen v0.0.0-20180714070128-381b34691fd9 h1:qkhZ9UvXCc1K+AgVRsSABoBin7UbyBqqJ8G+Tk6G//Q=
 github.com/vektah/gqlgen v0.0.0-20180714070128-381b34691fd9/go.mod h1:p6RS1iWLR+HVU1U2lU6vWgLjXSBtD0hRubzDWKhXFhY=
+github.com/vektah/gqlgen v0.0.0-20180720005318-90df37f6a807 h1:trbEAxtTkMEIKQZNhaHqrKCTL7hh7pcf4X9g5xXbyuI=
+github.com/vektah/gqlgen v0.0.0-20180720005318-90df37f6a807/go.mod h1:p6RS1iWLR+HVU1U2lU6vWgLjXSBtD0hRubzDWKhXFhY=
 google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
