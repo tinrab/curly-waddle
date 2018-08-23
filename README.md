@@ -11,7 +11,7 @@ $ docker-compose up -d
 Optionally insert fake data:
 
 ```
-$ vgo run ./cmd/fakedata/main.go
+$ vgo run ./cmd/fakedata
 ```
 
 Start GraphQL server:
